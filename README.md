@@ -7,6 +7,7 @@
 ## 文档
 
 - [Hummingbot 策略全目录](docs/hummingbot-strategies.md) — V2 Controllers、Scripts、Executors、V1 模板、如何启动
+- [偏高频做市评分](docs/strategy-scoring.md) — `simple_pmm` / `pmm_simple` / `pmm_v1` / V1 PMM / `pmm_mister` / `pmm_dynamic` / `grid_strike` / `bollingrid` / `quantum_grid_allocator`
 - 官方文档：[Strategies](https://hummingbot.org/strategies/) · [V2 示例](https://hummingbot.org/strategies/v2-strategies/examples/) · [V1](https://hummingbot.org/strategies/v1-strategies/)
 - AI 编排：[Condor](https://github.com/hummingbot/condor)（LLM 决策 + Hummingbot API 执行）
 
