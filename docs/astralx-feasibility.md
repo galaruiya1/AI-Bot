@@ -1,16 +1,44 @@
 # AstralX 上跑 `pmm_mister_hft` 的可行性
 
-结论先说：**交易所 API 能做 BTC 永续的开、平、限价、市价和预设止盈止损，但不能把现有 Hummingbot `pmm_mister_hft` 原样接到 AstralX 上当高频策略跑。**
+结论先说：**不能把现有 Hummingbot `pmm_mister_hft` 原样接到 AstralX。** AstralX 线上确有 `/openapi/` 合约接口，但完整下单字段要以你的 V9 PDF 为准。先前用 Websea 文档做的「张数 / 10 QPS / 无 WS 深度」**只适用于 Websea，不适用于 ASX**。
 
-拆成三层：
+拆成三层（A 依赖 PDF；B/C 在没 PDF 时只能说 Hummingbot 接不上、1.5 bps 仍要先看 ASX 盘口和费率）：
 
 | 层 | 问题 | 判断 |
 | --- | --- | --- |
-| A 下单 | 能否按 20x、约 800 USDT 名义开平 BTC 永续 | **能**（数量要改成整数张） |
-| B 基础设施 | 能否支撑贴盘口、只挂 maker、秒级撤改 | **弱 / 不够** |
-| C 参数经济 | 1.5 bps 止盈、5 bps 止损是否赚得到 | **不匹配**（和在币安上一样，ASX 上更差） |
+| A 下单 | 能否按 20x、约 800 USDT 名义开平 BTC 永续 | **待 V9 PDF / 鉴权探测**；CCXT 草稿有 `/openapi/contract/order` |
+| B 基础设施 | 能否在 Hummingbot 里贴盘口、只挂 maker、秒级撤改 | **现在不行**（无官方 connector） |
+| C 参数经济 | 1.5 bps 止盈、5 bps 止损是否赚得到 | **未知**（不要用 Websea 盘口代替） |
 
-本机路径 `D:\Users\jiawe\Desktop\AstralX\API文档\OpenApi接口文档-V9.pdf` 在这个云环境读不到。下面依据公开的 [Websea OpenAPI](https://webseaex.github.io/)（CCXT 把 AstralX 与 Websea 视为同一套 OpenAPI），并在 `2026-09-12` 探测了 `https://oapi.websea.com` 的 BTC-USDT 永续盘口。若 V9 PDF 里的主机、字段或权限与此不同，以 PDF 为准，并把差异标回本文。
+本机路径 `D:\Users\jiawe\Desktop\AstralX\API文档\OpenApi接口文档-V9.pdf` 在这个云环境读不到。下文分两块：AstralX 自己线上探到的接口，以及曾误用作对照的 Websea 公开文档。Websea 的盘口、张数、限频 **不能**当成 AstralX 的规格。
+
+---
+
+## 0. 为什么分析里会出现 Websea？它们是不是同一套？
+
+**不是同一家、也不是同一套线上接口。** 更不是「AstralX 照抄了 Websea」的证据。上次把 Websea 写进来，是代理文档，判断过宽。
+
+出现 Websea 的原因只有这些：
+
+1. 你的 V9 PDF 在云环境读不到，网上几乎搜不到 AstralX 的完整 OpenAPI 页面。
+2. CCXT 有一个未合入的 PR，标题写成 [Astralx & websea](https://github.com/ccxt/ccxt/pull/26985)。那是**同一个作者在一个 PR 里交了两个 connector**，不是官方声明两所交易所共用后端。点开代码是两个独立 class。
+3. Websea 把文档公开挂在 [webseaex.github.io](https://webseaex.github.io/)，接口也叫 OpenAPI。你的文件名同样是「OpenApi接口文档」，英文 OpenAPI 是通用叫法，不能用来认亲。
+
+线上探测（2026-09-12）对照：
+
+| | AstralX | Websea |
+| --- | --- | --- |
+| 网站 | `www.astralx.com`（Next.js） | `www.websea.com`（Nuxt） |
+| 实际 API 主机 | `https://www.astralx.com/openapi/...` | `https://oapi.websea.com/v1/...` |
+| 时间接口 | `GET /openapi/time` → `{"serverTime":...}` | 无此路径形态 |
+| 行情 | `GET /openapi/quote/ticker` → `{PEPE_USDT:{lastPrice,...}, ...}` | `{errno, errmsg, result:[...]}` |
+| 合约/交易对 | `/openapi/symbol` 等返回 `{code:20401,"Authentication failed"}`（要登录） | `/v1/futures/symbols` 公开返回张数、精度 |
+| 鉴权（CCXT 草稿） | HMAC-SHA256，query 带 `timestamp`/`signature`，头 `APIKEY-HEADER` | Header `Token` + `Nonce` + SHA1 `Signature` |
+| Websea 路径搬到 ASX | `/v1/futures/depth` 变成官网 HTML；`/openApi/market/symbols` **404** | 正常 JSON |
+
+因此：两家都是中小 CEX，都可能买过白标撮合系统，但**当前暴露出来的 REST 形态对不上**。没有公开材料证明同一公司、同一代码仓，或一家抄另一家。行业里更常见的是：多家交易所分别向不同（或偶尔相同）的 SaaS 厂商买引擎，文档都叫 OpenAPI。
+
+AstralX 自己的合约接口多数要鉴权才能看深度/标记价；没有 V9 PDF 之前，**不要用 Websea 的 10 张、10 QPS、无 WS 深度去给 ASX 下结论**。下面第 2 节起标了「Websea 对照」，只作形态参考。
 
 ---
 
@@ -19,18 +47,17 @@
 | 来源 | 状态 |
 | --- | --- |
 | 用户本机 V9 PDF | 云环境无法访问 Windows 路径 |
-| 公开文档 | [webseaex.github.io](https://webseaex.github.io/) REST + WS |
-| 鉴权 | Header：`Token` / `Nonce`（`unix_随机串`，60s 内一次性）/ `Signature`（SHA1） |
-| 探测到的公开行情 | `oapi.websea.com` 返回 BTC 永续盘口 |
-| `oapi.astralx.com` / `api.astralx.com` / `openapi.astralx.com` | 本环境 HTTP 403（WAF） |
-| Hummingbot | **没有** `astralx` / `websea` connector |
-| CCXT | `websea` 已有实现；`astralx` 独立 PR 仍未合入（[ccxt#26985](https://github.com/ccxt/ccxt/pull/26985)） |
+| AstralX 线上 | `https://www.astralx.com/openapi/time`、`/openapi/quote/ticker` 可用；合约类多 20401 |
+| `oapi.astralx.com` / `api.astralx.com` / `docs.astralx.com` | 本环境 HTTP 403（WAF） |
+| Websea 公开文档 | [webseaex.github.io](https://webseaex.github.io/) — **另一套接口**，仅对照 |
+| Hummingbot | **没有** `astralx` connector |
+| CCXT | 未合入的 [PR #26985](https://github.com/ccxt/ccxt/pull/26985) 里 `astralx` 与 `websea` 是两个 class |
 
 现有 YAML 写的是 `connector_name: binance_perpetual`。换成 AstralX **不会**因为改一个名字就能跑，必须先写永续 connector（或另写独立下单程序）。
 
 ---
 
-## 2. BTC 永续规格（公开 API 实测）
+## 2. BTC 永续规格（Websea 对照，不是 AstralX 实测）
 
 `GET /v1/futures/symbols` 与 `GET /v1/futures/symbol_precision`：
 
@@ -62,7 +89,7 @@
 
 ---
 
-## 3. 策略功能 vs OpenAPI
+## 3. 策略功能 vs Websea OpenAPI（对照，非 ASX）
 
 `pmm_mister_hft` 实际依赖的能力：
 
@@ -119,31 +146,28 @@ tick = 0.1 USDT，盘口价差约 0.13 bps。
 
 ## 5. 总判断
 
-**可行（有条件）**
+**已确认**
 
-- 用 OpenAPI 开/平 BTC-USDT 永续、20x、每笔 10 张（约 773 USDT 名义）。
-- 365.81 USDT 覆盖双边保证金后仍有缓冲。
-- 交易所原生止盈止损字段能承担三重屏障里的 TP/SL，减少轮询。
+- AstralX 线上 API 在 `www.astralx.com/openapi/`，与 Websea 的 `/v1` + `{errno,errmsg}` **不是同一套**。
+- Hummingbot 没有 AstralX connector，`pmm_mister_hft` 不能改 YAML 就上 ASX。
 
-**不可行（相对当前策略形态）**
+**仍取决于 V9 PDF**
 
-- Hummingbot 里没有 AstralX connector，`pmm_mister_hft` 不能改 YAML 就上 ASX。
-- 没有 post-only：`open_order_type: LIMIT_MAKER` 和 `take_profit_order_type: LIMIT_MAKER` 落不到 API 上。
-- 没有 WS 深度、ticker 最快 500ms、全局约 10 QPS：做不了策略文档里那种 0.1s 贴盘撤改。
-- 1.5 bps 止盈离盘口约 116 tick，和「频繁往返」冲突。
-- V1 开平仓语义未必等于币安 HEDGE；未验证前不能同时挂买卖夹单。
+- 下单字段、张/币数量、post-only、WS 深度、限频、20x、双向持仓。
+- 第 2–4 节的 10 张 / 116 tick / 10 QPS 是 **Websea 对照**，不能直接套到 ASX。
 
-因此：AstralX **适合写一个低频、按张数、用交易所止盈止损的开平仓机器人**；**不适合**把现在这份 `pmm_mister_hft` 当高频做市原样上线。
+**与交易所无关、仍然成立的算术**
+
+- 若 maker 不是接近 0，1.5 bps 毛止盈可能覆盖不了双边手续费（币安普通档已经如此）。
 
 ---
 
 ## 6. 若仍要在 ASX 做，最小改法
 
 1. 把 V9 PDF 放到仓库或对话附件，核对：真实 REST/WS host、是否有 post-only、是否有 WS depth、20x 与双向持仓、合约费率。
-2. 先写 connector 或独立脚本，走 **V2** `position_side` + `qty_type=contract`，数量 **10 张**。
-3. 开仓即带 `preset_take_profit_price` / `preset_stop_loss_price`（或 V1 的 `stop_profit_price` / `stop_loss_price`），不要用 0.1s 自建三重屏障刷单。
-4. 深度只用 REST，刷新不要短于 1–2s；全局限频按 10 QPS 做节流。
-5. 在 App 里读真实 maker/taker：若挂单费 ≥ 2 bps/边，把止盈改到能覆盖双边费之后再谈 1.5 bps 净利。
-6. 在账户里用 1 张（约 77 USDT 名义）验证：限价是否会吃单、反向开仓是否变成平仓、20x 是否被拒。
+2. 对照 PDF 写 connector：起点是 `https://www.astralx.com/openapi/`（不是 `oapi.websea.com`）。CCXT 草稿走 HMAC-SHA256 + `/openapi/contract/order`。
+3. 数量、tick、post-only、WS 深度、限频全部以 PDF 和 ASX 账户实测为准，不要沿用 Websea 的 10 张 / 10 QPS。
+4. 在 App 里读真实 maker/taker：若挂单费 ≥ 2 bps/边，1.5 bps 毛止盈仍可能净亏（这条与交易所无关，是费率算术）。
+5. 先用最小数量实盘验证限价会不会吃单、20x 是否允许、能否同时挂多空。
 
 相关文件：`strategies/pmm_mister_hft/conf_pmm_mister_hft_btc_astralx.yml.snippet`（对照表，**不能**丢进 Hummingbot 启动）。

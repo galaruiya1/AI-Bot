@@ -59,6 +59,7 @@ def test_docs_and_snippet_exist():
     text = DOC.read_text(encoding="utf-8")
     snippet = SNIPPET.read_text(encoding="utf-8")
     assert "不能把现有 Hummingbot" in text
+    assert "不是同一套线上接口" in text
     assert "qty_contracts: 10" in snippet
     assert "LIMIT_MAKER" in snippet
     assert "binance_perpetual" in snippet

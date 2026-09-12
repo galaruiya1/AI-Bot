@@ -1,6 +1,7 @@
-# AstralX / Websea-OpenAPI 对照草稿。不是 Hummingbot 可启动配置。
-# Hummingbot 没有 astralx connector；LIMIT_MAKER 与 HEDGE 也不能按币安语义直连。
-# 依据：公开 OpenAPI + 2026-09-12 oapi.websea.com BTC-USDT 永续盘口。
+# 对照草稿，不是 Hummingbot 可启动配置，也不是 AstralX 实盘规格。
+# AstralX 线上是 www.astralx.com/openapi/...（HMAC-SHA256），
+# 与 Websea 的 oapi.websea.com /v1（Token+Nonce+SHA1）不是同一套。
+# 下面张数/限频来自 Websea 公开文档，仅作形态参考。
 # 详见 docs/astralx-feasibility.md。
 
 # --- 目标（与币安 YAML 对齐的业务意图）---

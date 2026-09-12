@@ -9,7 +9,7 @@
 - [Hummingbot 策略全目录](docs/hummingbot-strategies.md) — V2 Controllers、Scripts、Executors、V1 模板、如何启动
 - [偏高频做市评分](docs/strategy-scoring.md) — `simple_pmm` / `pmm_simple` / `pmm_v1` / V1 PMM / `pmm_mister` / `pmm_dynamic` / `grid_strike` / `bollingrid` / `quantum_grid_allocator`
 - [pmm_mister BTC 永续高频](strategies/pmm_mister_hft/README.md) — 20x、每笔 800 USDT、止盈 1.5 bps、止损 5 bps
-- [AstralX 可行性](docs/astralx-feasibility.md) — OpenAPI 能下单，但不能把 `pmm_mister_hft` 原样接到 ASX 当高频跑
+- [AstralX 可行性](docs/astralx-feasibility.md) — 与 Websea 不是同一套 API；Hummingbot 仍接不上 ASX
 - 官方文档：[Strategies](https://hummingbot.org/strategies/) · [V2 示例](https://hummingbot.org/strategies/v2-strategies/examples/) · [V1](https://hummingbot.org/strategies/v1-strategies/)
 - AI 编排：[Condor](https://github.com/hummingbot/condor)（LLM 决策 + Hummingbot API 执行）
 
