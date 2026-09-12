@@ -8,7 +8,7 @@
 
 - [Hummingbot 策略全目录](docs/hummingbot-strategies.md) — V2 Controllers、Scripts、Executors、V1 模板、如何启动
 - [偏高频做市评分](docs/strategy-scoring.md) — `simple_pmm` / `pmm_simple` / `pmm_v1` / V1 PMM / `pmm_mister` / `pmm_dynamic` / `grid_strike` / `bollingrid` / `quantum_grid_allocator`
-- [pmm_mister BTC 高频改造](strategies/pmm_mister_hft/README.md) — tick 报价、0.1s 时钟、纸交易后再上现货
+- [pmm_mister BTC 永续高频](strategies/pmm_mister_hft/README.md) — 20x、每笔 800 USDT、止盈 1.5 bps、止损 5 bps
 - 官方文档：[Strategies](https://hummingbot.org/strategies/) · [V2 示例](https://hummingbot.org/strategies/v2-strategies/examples/) · [V1](https://hummingbot.org/strategies/v1-strategies/)
 - AI 编排：[Condor](https://github.com/hummingbot/condor)（LLM 决策 + Hummingbot API 执行）
 

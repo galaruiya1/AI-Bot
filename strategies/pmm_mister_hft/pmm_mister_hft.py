@@ -24,7 +24,7 @@ from controllers.generic.pmm_mister import PMMister, PMMisterConfig
 
 class PMMisterHFTConfig(PMMisterConfig):
     controller_name: str = "pmm_mister_hft"
-    connector_name: str = Field(default="binance")
+    connector_name: str = Field(default="binance_perpetual")
     trading_pair: str = Field(default="BTC-USDT")
 
     # Quote from mid, or from the live bid/ask (HFT default).
@@ -33,10 +33,10 @@ class PMMisterHFTConfig(PMMisterConfig):
     join_touch: bool = Field(default=True, json_schema_extra={"is_updatable": True})
 
     tick_mode: bool = Field(default=True, json_schema_extra={"is_updatable": True})
-    buy_spreads: list = Field(default="1,3,8", json_schema_extra={"is_updatable": True})
-    sell_spreads: list = Field(default="1,3,8", json_schema_extra={"is_updatable": True})
-    buy_amounts_pct: list = Field(default="5,3,2", json_schema_extra={"is_updatable": True})
-    sell_amounts_pct: list = Field(default="5,3,2", json_schema_extra={"is_updatable": True})
+    buy_spreads: list = Field(default="1", json_schema_extra={"is_updatable": True})
+    sell_spreads: list = Field(default="1", json_schema_extra={"is_updatable": True})
+    buy_amounts_pct: list = Field(default="1", json_schema_extra={"is_updatable": True})
+    sell_amounts_pct: list = Field(default="1", json_schema_extra={"is_updatable": True})
 
     executor_refresh_time: int = Field(default=3, json_schema_extra={"is_updatable": True})
     buy_cooldown_time: int = Field(default=4, json_schema_extra={"is_updatable": True})
@@ -52,7 +52,11 @@ class PMMisterHFTConfig(PMMisterConfig):
     max_active_executors_by_level: Optional[int] = Field(default=1, json_schema_extra={"is_updatable": True})
     min_skew: Decimal = Field(default=Decimal("0.25"), json_schema_extra={"is_updatable": True})
     position_profit_protection: bool = Field(default=True, json_schema_extra={"is_updatable": True})
-    take_profit: Optional[Decimal] = Field(default=Decimal("0.0006"), json_schema_extra={"is_updatable": True})
+    # Each open/close clip in quote (USDT notional, before leverage).
+    order_notional_quote: Decimal = Field(default=Decimal("800"), json_schema_extra={"is_updatable": True})
+    take_profit: Optional[Decimal] = Field(default=Decimal("0.00015"), json_schema_extra={"is_updatable": True})
+    stop_loss: Optional[Decimal] = Field(default=Decimal("0.0005"), json_schema_extra={"is_updatable": True})
+    time_limit: Optional[int] = Field(default=120, json_schema_extra={"is_updatable": True})
     take_profit_order_type: Optional[OrderType] = Field(
         default=OrderType.LIMIT_MAKER, json_schema_extra={"is_updatable": True}
     )
@@ -60,8 +64,8 @@ class PMMisterHFTConfig(PMMisterConfig):
         default=OrderType.LIMIT_MAKER, json_schema_extra={"is_updatable": True}
     )
 
-    leverage: int = Field(default=1, json_schema_extra={"is_updatable": True})
-    position_mode: PositionMode = Field(default=PositionMode.ONEWAY)
+    leverage: int = Field(default=20, json_schema_extra={"is_updatable": True})
+    position_mode: PositionMode = Field(default=PositionMode.HEDGE)
     position_side: TradeType = Field(default="BUY")
 
     global_tp_enabled: bool = Field(default=True, json_schema_extra={"is_updatable": True})
@@ -72,9 +76,9 @@ class PMMisterHFTConfig(PMMisterConfig):
     global_sl_activation_from: str = Field(default="target_base", json_schema_extra={"is_updatable": True})
 
     target_base_pct: Decimal = Field(default=Decimal("0.5"), json_schema_extra={"is_updatable": True})
-    min_base_pct: Decimal = Field(default=Decimal("0.35"), json_schema_extra={"is_updatable": True})
-    max_base_pct: Decimal = Field(default=Decimal("0.65"), json_schema_extra={"is_updatable": True})
-    portfolio_allocation: Decimal = Field(default=Decimal("0.5"), json_schema_extra={"is_updatable": True})
+    min_base_pct: Decimal = Field(default=Decimal("0.25"), json_schema_extra={"is_updatable": True})
+    max_base_pct: Decimal = Field(default=Decimal("0.70"), json_schema_extra={"is_updatable": True})
+    portfolio_allocation: Decimal = Field(default=Decimal("1"), json_schema_extra={"is_updatable": True})
 
     @field_validator("price_source", mode="before")
     @classmethod
@@ -84,6 +88,11 @@ class PMMisterHFTConfig(PMMisterConfig):
             raise ValueError("price_source must be mid or best_bid_ask")
         return value
 
+    def get_spreads_and_amounts_in_quote(self, trade_type: TradeType):
+        """Each clip is order_notional_quote USDT, independent of the 50/50 parent split."""
+        spreads = self.buy_spreads if trade_type == TradeType.BUY else self.sell_spreads
+        return spreads, [self.order_notional_quote for _ in spreads]
+
     @property
     def triple_barrier_config(self) -> TripleBarrierConfig:
         open_order_type = self.open_order_type if isinstance(self.open_order_type, OrderType) else OrderType.LIMIT_MAKER
@@ -92,6 +101,8 @@ class PMMisterHFTConfig(PMMisterConfig):
         )
         return TripleBarrierConfig(
             take_profit=self.take_profit,
+            stop_loss=self.stop_loss,
+            time_limit=self.time_limit,
             trailing_stop=None,
             open_order_type=open_order_type,
             take_profit_order_type=take_profit_order_type,

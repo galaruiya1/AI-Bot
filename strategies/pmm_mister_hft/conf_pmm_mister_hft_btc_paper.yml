@@ -1,21 +1,22 @@
-# Same as the live BTC config, against Binance paper trade.
-# No API keys required. Still set tick_size: 0.1 in conf/conf_client.yml.
+# Same clip logic against Binance USDT-M testnet. No live funds.
+# Connector: binance_perpetual_testnet. Still set tick_size: 0.1.
 
 id: pmm_mister_hft_btc_paper
 controller_name: pmm_mister_hft
 controller_type: generic
 
-connector_name: binance_paper_trade
+connector_name: binance_perpetual_testnet
 trading_pair: BTC-USDT
-leverage: 1
-position_mode: ONEWAY
+leverage: 20
+position_mode: HEDGE
 position_side: BUY
 
-total_amount_quote: 200
-portfolio_allocation: 0.5
+total_amount_quote: 1600
+portfolio_allocation: 1
+order_notional_quote: 800
 target_base_pct: 0.5
-min_base_pct: 0.35
-max_base_pct: 0.65
+min_base_pct: 0.25
+max_base_pct: 0.70
 min_skew: 0.25
 
 price_source: best_bid_ask
@@ -23,26 +24,18 @@ join_touch: true
 tick_mode: true
 buy_spreads:
   - 1
-  - 3
-  - 8
 sell_spreads:
   - 1
-  - 3
-  - 8
 buy_amounts_pct:
-  - 5
-  - 3
-  - 2
+  - 1
 sell_amounts_pct:
-  - 5
-  - 3
-  - 2
+  - 1
 
 executor_refresh_time: 3
 buy_cooldown_time: 4
 sell_cooldown_time: 4
-buy_position_effectivization_time: 15
-sell_position_effectivization_time: 15
+buy_position_effectivization_time: 8
+sell_position_effectivization_time: 8
 max_active_executors_by_level: 1
 
 price_distance_tolerance: 1
@@ -51,13 +44,15 @@ tolerance_scaling: 1.5
 
 open_order_type: LIMIT_MAKER
 take_profit_order_type: LIMIT_MAKER
-take_profit: 0.0006
+take_profit: 0.00015
+stop_loss: 0.0005
+time_limit: 120
 position_profit_protection: true
 
 global_tp_enabled: true
 global_sl_enabled: true
-global_take_profit: 0.008
-global_stop_loss: 0.015
+global_take_profit: 0.01
+global_stop_loss: 0.02
 global_tp_activation_from: min_base
 global_sl_activation_from: target_base
 global_pnl_reference: position
