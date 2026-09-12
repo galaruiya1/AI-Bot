@@ -1,0 +1,40 @@
+# AstralX / Websea-OpenAPI 对照草稿。不是 Hummingbot 可启动配置。
+# Hummingbot 没有 astralx connector；LIMIT_MAKER 与 HEDGE 也不能按币安语义直连。
+# 依据：公开 OpenAPI + 2026-09-12 oapi.websea.com BTC-USDT 永续盘口。
+# 详见 docs/astralx-feasibility.md。
+
+# --- 目标（与币安 YAML 对齐的业务意图）---
+# 账户 365.81 USDT，杠杆 20，止盈 1.5 bps，止损 5 bps。
+# 数量必须用张：1 张 = 0.001 BTC ≈ 77 USDT；10 张 ≈ 773 USDT（最接近 800）。
+
+intended:
+  venue: astralx          # 公开文档形态等同 websea OpenAPI
+  symbol: BTC-USDT
+  leverage: 20            # V2 示例到过 50；账户内确认
+  qty_contracts: 10
+  qty_type: contract
+  margin_mode: isolated   # V1 is_full=1
+  position_mode: dual     # 必须用 V2 position_side=long|short 验证，不要假设等于币安 HEDGE
+  take_profit: 0.00015    # ≈ 116 tick @ tick=0.1；成交会慢
+  stop_loss: 0.0005       # 市价或 preset_stop_loss_price
+  time_limit_s: 120
+
+# --- 实际应调用的接口（V2）---
+# POST /v2/futures/order/create
+#   trade_type=open
+#   position_side=long|short
+#   order_type=limit
+#   leverage=20
+#   qty=10
+#   qty_type=contract
+#   preset_take_profit_price / preset_stop_loss_price
+# POST /v1/futures/order/cancel   order_ids=...
+# GET  /v1/futures/depth          无 WS 深度；不要低于 1–2s 一轮
+# 全局限频 100 req / 10s / API key
+
+# --- 明确做不到的 Hummingbot 字段 ---
+# connector_name: binance_perpetual     → 无效
+# open_order_type: LIMIT_MAKER          → API 无 post-only
+# take_profit_order_type: LIMIT_MAKER   → 同上
+# tick_size: 0.1 策略时钟               → 行情 WS tickers 最快 500ms
+# order_notional_quote: 800             → 改成 10 张

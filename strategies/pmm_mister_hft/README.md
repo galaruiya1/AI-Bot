@@ -73,9 +73,14 @@ hbot config leverage 20
 hbot config manual_kill_switch true
 ```
 
+## AstralX
+
+不要改 `connector_name` 就接到 AstralX。Hummingbot 没有该交易所 connector；公开 OpenAPI 也没有 post-only / WS 深度，全局限频约 10 QPS。数量若上 ASX，应用 **10 张**（1 张 = 0.001 BTC，约 773 USDT 名义），不是 800 这个数字。详见 [AstralX 可行性](../../docs/astralx-feasibility.md)。
+
 ## 文件
 
 - `pmm_mister_hft.py` → `controllers/generic/`
 - `conf_pmm_mister_hft_btc_paper.yml` — 测试网
-- `conf_pmm_mister_hft_btc.yml` — 实盘 BTCUSDT 永续
+- `conf_pmm_mister_hft_btc.yml` — 实盘 BTCUSDT 永续（币安）
+- `conf_pmm_mister_hft_btc_astralx.yml.snippet` — ASX 对照草稿，不能启动
 - `conf_client_tick_size.yml.snippet` — 0.1s 时钟
